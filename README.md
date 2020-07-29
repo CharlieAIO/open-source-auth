@@ -5,22 +5,30 @@
 
 * Add all db information to Config Vars on heroku app:
 
+```
 DB_USERNAME=
 DB_PASSWORD=
 HOST=
 DB_PORT=
 DB_NAME=
 NODE_TLS_REJECT_UNAUTHORIZED=0
+```
 
 * Add all discord information to Config Vars on heroku app:
+
+```
 BOT_TOKEN=
 PREFIX=!
 GUILD_ID=
 ROLE_ID=
+```
 
 * Add all API information to Config Vars on heroku app:
+
+```
 API_BASE=http://127.0.0.1:5000 (api base is just the base url of your site, make sure there is no / on the end)
 API_KEY=api-key-here
+```
 
 
 ## API
