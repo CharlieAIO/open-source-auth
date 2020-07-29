@@ -1,0 +1,6 @@
+{
+  "name": "CharlieAIO Auth",
+  "description": "Basic Auth app",
+  "repository": "https://github.com/CharlieAIO/open-source-auth",
+  "keywords": ["node", "express", "discord"]
+}
