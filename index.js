@@ -13,4 +13,4 @@ app.use(express.json());
 app.use('/api/', api)
 app.use('/',discord)
 
-app.listen(process.env.PORT, () => console.log(`Listening on port: ${process.env.port}`))
+app.listen(process.env.PORT || 5000, () => console.log(`Listening on port: ${process.env.port}`))
