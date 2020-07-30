@@ -1,6 +1,16 @@
 const express = require('express');
-const router = express.Router();
 const { Client } = require('pg');
+
+const router = express.Router();
+
+const db = new Client({
+    user: process.env.DB_USERNAME,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT,
+    host: process.env.HOST,
+    ssl: true,    
+})
 
 function generate(length) {
     var result = "";
@@ -13,74 +23,51 @@ function generate(length) {
 }
 
 
-router.get(
-    '/',
-    async function(req, res){
-        res.send('Welcome to the api.').end(200)
-    }
-)
+router.get('/', async (req, res) => {
+        res.json({
+            version: '1.0.0'
+        })
+})
 
-router.get(
-    '/create/key/table',
-    async function(req, res){
-        if(req.get('apiKey') == process.env.API_KEY){
-            const client = new Client({
-                user:process.env.DB_USERNAME,
-                password:process.env.DB_PASSWORD,
-                database:process.env.DB_NAME,
-                port:process.env.DB_PORT,
-                host:process.env.HOST,
-                ssl:true,    
-            })
-            await client.connect()
-            try{
-                await client.query(`CREATE TABLE keys ("key" VARCHAR(255) NOT NULL, "type" VARCHAR(100) NOT NULL, "id" VARCHAR(100), "machineId" VARCHAR(255))`)
-                await client.end()
-                res.send('Table created').end(200)
-            }catch(error){
-                await client.end()
+router.get('/create/key/table', async (req, res) => {
+        if (req.get('apiKey') == process.env.API_KEY) {
+            await db.connect()
+            try {
+                await db.query(`CREATE TABLE keys ("key" VARCHAR(255) NOT NULL, "type" VARCHAR(100) NOT NULL, "id" VARCHAR(100), "machineId" VARCHAR(255))`)
+                await db.end()
+                res.send('Table created').status(200)
+            } catch(error) {
+                await db.end()
                 console.log(error)
-                res.send('Failed to create table').end(200)
+                res.send('Failed to create table').status(400)
             }
-
-
-        }else{
+        } else {
             res.sendStatus(403)
         }
     }
 )
 
-router.post(
-    '/key',
-    async function(req, res){
-        if(req.get('apiKey') == process.env.API_KEY){
-            const client = new Client({
-                user:process.env.DB_USERNAME,
-                password:process.env.DB_PASSWORD,
-                database:process.env.DB_NAME,
-                port:process.env.DB_PORT,
-                host:process.env.HOST,
-                ssl:true,    
-            })
-            await client.connect()
-            try{
-                if(req.body.key){
-                    let results = await client.query(`select * from keys where key = '${req.body.key}'`);
-                    await client.end()
-                    res.json(results.rows[0]).end(200)
+router.post('/key', async (req, res) => {
+        if (req.get('apiKey') == process.env.API_KEY) {
+            await db.connect()
+            try {
+                if (req.body.key) {
+                    let results = await db.query(`select * from keys where key = '${req.body.key}'`);
+                    await db.end()
+                    res.json(results.rows[0]).status(200)
                 }
-                if(req.body.userID){
-                    let results = await client.query(`select * from keys where id = '${req.body.userID}'`);
-                    await client.end()
-                    res.json(results.rows[0]).end(200)
+                if (req.body.userID) {
+                    let results = await db.query(`select * from keys where id = '${req.body.userID}'`);
+                    await db.end()
+                    res.json(results.rows[0]).status(200)
                 }
-            }catch(error){
-                await client.end()
+            } catch(error) {
+                await db.end()
                 console.log(error)
-                res.json({"error":error}).end(404)
+                res.json({ error }).status(400)
             }
 
-        }else{
+        } else {
             res.sendStatus(403)
         }
     }
@@ -88,200 +75,137 @@ router.post(
 
 
 
-router.get(
-    '/list/users',
-    async function(req, res){
-        if(req.get('apiKey') == process.env.API_KEY){
-            const client = new Client({
-                user:process.env.DB_USERNAME,
-                password:process.env.DB_PASSWORD,
-                database:process.env.DB_NAME,
-                port:process.env.DB_PORT,
-                host:process.env.HOST,
-                ssl:true,    
-            })
-            await client.connect()
-            try{
-                let results = await client.query(`select * from keys`);
-                await client.end()
-                res.json(results.rows).end(200)
-            }catch(error){
-                await client.end()
+router.get('/list/users', async (req, res) => {
+        if (req.get('apiKey') == process.env.API_KEY) {
+            await db.connect()
+            try {
+                let results = await db.query(`select * from keys`);
+                await db.end()
+                res.json(results.rows).status(200)
+            } catch(error) {
+                await db.end()
                 console.log(error)
-                res.json({"error":error}).end(200)
+                res.json({ error }).status(400)
             }
-
-
-        }else{
-            res.sendStatus(403)
+        } else {
+            res.sendStatus(401)
         }
     }
 )
 
 
-router.post(
-    '/insert/key',
-    async function(req, res){
-        if(req.get('apiKey') == process.env.API_KEY){
-            const client = new Client({
-                user:process.env.DB_USERNAME,
-                password:process.env.DB_PASSWORD,
-                database:process.env.DB_NAME,
-                port:process.env.DB_PORT,
-                host:process.env.HOST,
-                ssl:true,    
-            })
-            await client.connect()
-            try{
+router.post('/insert/key', async (req, res) => {
+        if (req.get('apiKey') == process.env.API_KEY) {
+            await db.connect()
+            try{ 
                 var key = `${generate(4)}-${generate(4)}-${generate(4)}-${generate(4)}`
                 // key : key type : discord id : machine id
-                await client.query("insert into keys values ($1,$2,$3,$4)",[key,req.body.type,null,null])
-                await client.end();
-                res.send({key:key,type:req.body.type,status:'added'}).end(200)
-            }catch(error){
+                await db.query("insert into keys values ($1,$2,$3,$4)",[key,req.body.type,null,null])
+                await db.end();
+                res.send({key:key,type:req.body.type,status:'added'}).status(200)
+            } catch(error) {
                 console.log(error)
-                await client.end()
-                res.json({"error":error}).end(200)
+                await db.end()
+                res.json({ error }).status(400)
             }
         }else{
-            res.sendStatus(403)
+            res.sendStatus(401)
         }
     }
 )
 
-router.post(
-    '/reset/machine',
-    async function(req, res){
-        if(req.get('apiKey') == process.env.API_KEY){
-            const client = new Client({
-                user:process.env.DB_USERNAME,
-                password:process.env.DB_PASSWORD,
-                database:process.env.DB_NAME,
-                port:process.env.DB_PORT,
-                host:process.env.HOST,
-                ssl:true,    
-            })
-            await client.connect()
-            try{
-                let results = await client.query(`select * from keys where key = '${req.body.key}'`);
+router.post('/reset/machine', async (req, res) => {
+        if (req.get('apiKey') == process.env.API_KEY) {
+            await db.connect()
+            try {
+                let results = await db.query(`select * from keys where key = '${req.body.key}'`);
+                if (results.rows.length == 0) {
+                    await db.end()
+                    return res.sendStatus(404)
+                }
+                await db.query(`update keys set "machineId"=null where key='${req.body.key}'`);
+                await db.end()
+                res.sendStatus(200)
+            } catch(error) {
+                console.log(error)
+                await db.end()
+                res.json({ error }).status(400)
+            }
+
+        }else{
+            res.sendStatus(401)
+        }
+    }
+)
+
+router.post('/set/machine', async (req, res) => {
+        if (req.get('apiKey') == process.env.API_KEY){ 
+            await db.connect()
+            try {
+                await db.query(`update keys set "machineId"='${req.body.machine}' where key='${req.body.key}'`);
+                await db.end()
+                res.sendStatus(200).end()
+            } catch(error) {
+                await db.end()
+                console.log(error)
+                res.json({ error }).status(400)
+            }
+        } else {
+            res.sendStatus(401)
+        }
+    }
+)
+
+
+router.post('/bind/user', async (req, res) => {
+        if (req.get('apiKey') == process.env.API_KEY) {
+            await db.connect()
+            try {
+                let results = await db.query(`select * from keys where key = '${req.body.key}'`);
+                if (results.rows.length == 0) {
+                    await db.end()
+                    res.sendStatus(400)
+                }
+                if (results.rows[0].id == null) {
+                    await db.query(`update keys set "id"='${req.body.userID}' where key='${req.body.key}'`);
+                    await db.end()
+                    res.sendStatus(200)
+                } else {
+                    await db.end()
+                    res.json({ error:"user already bound" }).status(400)
+                }
+            } catch(error) {
+                await db.end()
+                console.log(error)
+                res.json({ error }).status(400)
+            }
+
+        } else {
+            res.sendStatus(401)
+        }
+    }
+)
+
+router.post('/unbind/user', async (req, res) => {
+        if (req.get('apiKey') == process.env.API_KEY) {
+            await db.connect()
+            try {
+                let results = await db.query(`select * from keys where key = '${req.body.key}'`);
                 if(results.rows.length == 0){
-                    await client.end()
+                    await db.end()
                     res.sendStatus(404).end()
                 }
-                await client.query(`update keys set "machineId"=null where key='${req.body.key}'`);
-                await client.end()
+                await db.query(`update keys set "id"=null where key='${req.body.key}'`);
+                await db.end()
                 res.sendStatus(200).end()
-            }catch(error){
+            } catch(error) {
+                await db.end()
                 console.log(error)
-                await client.end()
-                res.json({"error":error}).end(200)
+                res.json({ error }).status(400)
             }
 
-        }else{
-            res.sendStatus(403)
-        }
-    }
-)
-
-router.post(
-    '/set/machine',
-    async function(req, res){
-        if(req.get('apiKey') == process.env.API_KEY){
-            const client = new Client({
-                user:process.env.DB_USERNAME,
-                password:process.env.DB_PASSWORD,
-                database:process.env.DB_NAME,
-                port:process.env.DB_PORT,
-                host:process.env.HOST,
-                ssl:true,    
-            })
-            await client.connect()
-            try{
-                await client.query(`update keys set "machineId"='${req.body.machine}' where key='${req.body.key}'`);
-                await client.end()
-                res.sendStatus(200).end()
-            }catch(error){
-                await client.end()
-                console.log(error)
-                res.json({"error":error}).end(200)
-            }
-
-        }else{
-            res.sendStatus(403)
-        }
-    }
-)
-
-
-router.post(
-    '/bind/user',
-    async function(req, res){
-        if(req.get('apiKey') == process.env.API_KEY){
-            const client = new Client({
-                user:process.env.DB_USERNAME,
-                password:process.env.DB_PASSWORD,
-                database:process.env.DB_NAME,
-                port:process.env.DB_PORT,
-                host:process.env.HOST,
-                ssl:true,    
-            })
-            await client.connect()
-            try{
-                let results = await client.query(`select * from keys where key = '${req.body.key}'`);
-                if(results.rows.length == 0){
-                    await client.end()
-                    res.sendStatus(404).end()
-                }
-                if(results.rows[0].id == null){
-                    await client.query(`update keys set "id"='${req.body.userID}' where key='${req.body.key}'`);
-                    await client.end()
-                    res.sendStatus(200).end()
-                }else{
-                    await client.end()
-                    res.json({"error":"user already bound"}).end(404)
-                }
-            }catch(error){
-                await client.end()
-                console.log(error)
-                res.json({"error":error}).end(200)
-            }
-
-        }else{
-            res.sendStatus(403)
-        }
-    }
-)
-
-router.post(
-    '/unbind/user',
-    async function(req, res){
-        if(req.get('apiKey') == process.env.API_KEY){
-            const client = new Client({
-                user:process.env.DB_USERNAME,
-                password:process.env.DB_PASSWORD,
-                database:process.env.DB_NAME,
-                port:process.env.DB_PORT,
-                host:process.env.HOST,
-                ssl:true,    
-            })
-            await client.connect()
-            try{
-                let results = await client.query(`select * from keys where key = '${req.body.key}'`);
-                if(results.rows.length == 0){
-                    await client.end()
-                    res.sendStatus(404).end()
-                }
-                await client.query(`update keys set "id"=null where key='${req.body.key}'`);
-                await client.end()
-                res.sendStatus(200).end()
-            }catch(error){
-                await client.end()
-                console.log(error)
-                res.json({"error":error}).end(200)
-            }
-
-        }else{
-            res.sendStatus(403)
+        } else {
+            res.sendStatus(401)
         }
     }
 )
